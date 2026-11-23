@@ -129,7 +129,7 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "AzureSqlTable50",
+									"referenceName": "AzureSqlTable49",
 									"type": "DatasetReference",
 									"parameters": {
 										"schema": "stg",
