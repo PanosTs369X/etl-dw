@@ -1,0 +1,27 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "afsauebtsiris"
+		},
+		"etl_dw_1_password": {
+			"value": ""
+		},
+		"etl_dw_1_properties_typeProperties_server": {
+			"value": "afsauebtsiris.database.windows.net"
+		},
+		"etl_dw_1_properties_typeProperties_database": {
+			"value": "AW_OLTP"
+		},
+		"etl_dw_1_properties_typeProperties_userName": {
+			"value": "afsauebtsiris"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}

@@ -1,0 +1,302 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "afsauebtsiris"
+		},
+		"etl_dw_1_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'etl_dw_1'"
+		},
+		"etl_dw_1_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "afsauebtsiris.database.windows.net"
+		},
+		"etl_dw_1_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "AW_OLTP"
+		},
+		"etl_dw_1_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "afsauebtsiris"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/FINAL_ETL')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Truncate_Staging",
+						"type": "Script",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "etl_dw_1",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": "BEGIN \nIF OBJECT_ID('stg.salesorderheader', 'U') IS NOT NULL \nTRUNCATE TABLE stg.salesorderheader; \nIF OBJECT_ID('stg.salesorderdetail', 'U') IS NOT NULL \nTRUNCATE TABLE stg.salesorderdetail; \nIF OBJECT_ID('stg.customer', 'U') IS NOT NULL \nTRUNCATE TABLE stg.customer; \nIF OBJECT_ID('stg.person', 'U') IS NOT NULL \nTRUNCATE TABLE stg.person; \nIF OBJECT_ID('stg.product', 'U') IS NOT NULL \nTRUNCATE TABLE stg.product; \nIF OBJECT_ID('stg.productsubcategory', 'U') IS NOT NULL \nTRUNCATE TABLE stg.productsubcategory; \nIF OBJECT_ID('stg.productcategory', 'U') IS NOT NULL \nTRUNCATE TABLE stg.productcategory; \nIF OBJECT_ID('stg.salesterritory', 'U') IS NOT NULL \nTRUNCATE TABLE stg.salesterritory; \nIF OBJECT_ID('stg.store', 'U') IS NOT NULL \nTRUNCATE TABLE stg.store; \nEND"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Select_Tables_from_OLTP",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Truncate_Staging",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT \nt.TABLE_SCHEMA AS schema_name, \nt.TABLE_NAME   AS table_name \nFROM INFORMATION_SCHEMA.TABLES t \nWHERE TABLE_TYPE = 'BASE TABLE' \nAND (t.TABLE_SCHEMA + '.' + t.TABLE_NAME) IN ( \n'Sales.SalesOrderDetail', \n'Sales.Customer', \n'Person.Person', \n'Sales.Store', \n'Production.Product', \n'Production.ProductCategory', \n'Sales.SalesTerritory' \n) \nORDER BY t.TABLE_SCHEMA, t.TABLE_NAME;",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlTable48",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "Loop_OLTOP",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Select_Tables_from_OLTP",
+								"dependencyConditions": [
+									"Skipped"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Select_Tables_from_OLTP').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy_OLTP_Tables",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "AzureSqlSink",
+											"writeBehavior": "insert",
+											"sqlWriterUseTableLock": false
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "AzureSqlTable49",
+											"type": "DatasetReference",
+											"parameters": {
+												"schema": "@item().schema_name ",
+												"table": {
+													"value": "@item().table_name ",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "AzureSqlTable50",
+											"type": "DatasetReference",
+											"parameters": {
+												"schema": "stg",
+												"table": {
+													"value": "@item().table_name",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/etl_dw_1')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable48')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable49')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlTable50')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTable48')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "etl_dw_1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/etl_dw_1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTable49')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "etl_dw_1",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"schema": {
+						"type": "string"
+					},
+					"table": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/etl_dw_1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlTable50')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "etl_dw_1",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"schema": {
+						"type": "string"
+					},
+					"table": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/etl_dw_1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/etl_dw_1')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('etl_dw_1_properties_typeProperties_server')]",
+					"database": "[parameters('etl_dw_1_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('etl_dw_1_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('etl_dw_1_password')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
