@@ -202,6 +202,189 @@
 						"type": "DatasetReference"
 					}
 				]
+			},
+			{
+				"name": "Data flow1",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "productsubcategory",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "soviet_union",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "Lookup1",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Script1",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT \nt.TABLE_SCHEMA AS schema_name, \nt.TABLE_NAME   AS table_name \nFROM INFORMATION_SCHEMA.TABLES t\nWHERE TABLE_TYPE = 'BASE TABLE' \n  AND (t.TABLE_SCHEMA + '.' + t.TABLE_NAME) IN ( \n        'stg.SalesOrderDetail', \n        'stg.Customer', \n        'stg.Person', \n        'stg.Store', \n        'stg.Product', \n        'stg.ProductCategory', \n        'stg.ProductSubcategory', \n         'stg.SalesOrderHeader', \n        'stg.SalesTerritory' \n  ) \nORDER BY t.TABLE_SCHEMA, t.TABLE_NAME; ",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTable54",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Script1",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Data flow1",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "etl_dw_1",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "IF OBJECT_ID('wrk.ProductCategory', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.ProductCategory; \nIF OBJECT_ID('wrk.Customer', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.Customer; \nIF OBJECT_ID('wrk.ProductSubcategory', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.ProductSubcategory; \nIF OBJECT_ID('wrk.SalesOrderHeader', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.SalesOrderHeader; \nIF OBJECT_ID('wrk.SalesOrderDetail', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.SalesOrderDetail; \nIF OBJECT_ID('wrk.Store', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.Store; \nIF OBJECT_ID('wrk.SalesTerritory', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.SalesTerritory; \nIF OBJECT_ID('wrk.Person', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.Person;\nIF OBJECT_ID('wrk.pre_fact', 'U') IS NOT NULL \nTRUNCATE TABLE wrk.pre_fact;"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Loop STG",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup1",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup1').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy To WRK",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"writeBehavior": "insert",
+									"sqlWriterUseTableLock": false,
+									"tableOption": "autoCreate",
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "AzureSqlTable55",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": {
+											"value": "@item().schema_name",
+											"type": "Expression"
+										},
+										"table": {
+											"value": "@item().table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "AzureSqlTable56",
+									"type": "DatasetReference",
+									"parameters": {
+										"schema": "wrk",
+										"table": {
+											"value": "@item().table_name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
 			}
 		],
 		"annotations": []
