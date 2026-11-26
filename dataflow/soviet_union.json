@@ -1,0 +1,113 @@
+{
+	"name": "soviet_union",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DelimitedText2",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "DelimitedText3",
+						"type": "DatasetReference"
+					},
+					"name": "source2"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable53",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "union1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          SalesOrderID as string,",
+				"          RevisionNumber as string,",
+				"          OrderDate as string,",
+				"          DueDate as string,",
+				"          ShipDate as string,",
+				"          Status as string,",
+				"          OnlineOrderFlag as string,",
+				"          SalesOrderNumber as string,",
+				"          PurchaseOrderNumber as string,",
+				"          AccountNumber as string,",
+				"          CustomerID as string,",
+				"          SalesPersonID as string,",
+				"          TerritoryID as string,",
+				"          BillToAddressID as string,",
+				"          ShipToAddressID as string,",
+				"          ShipMethodID as string,",
+				"          CreditCardID as string,",
+				"          CreditCardApprovalCode as string,",
+				"          CurrencyRateID as string,",
+				"          SubTotal as string,",
+				"          TaxAmt as string,",
+				"          Freight as string,",
+				"          TotalDue as string,",
+				"          Comment as string,",
+				"          rowguid as string,",
+				"          ModifiedDate as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source(output(",
+				"          SalesOrderID as string,",
+				"          RevisionNumber as string,",
+				"          OrderDate as string,",
+				"          DueDate as string,",
+				"          ShipDate as string,",
+				"          Status as string,",
+				"          OnlineOrderFlag as string,",
+				"          SalesOrderNumber as string,",
+				"          PurchaseOrderNumber as string,",
+				"          AccountNumber as string,",
+				"          CustomerID as string,",
+				"          SalesPersonID as string,",
+				"          TerritoryID as string,",
+				"          BillToAddressID as string,",
+				"          ShipToAddressID as string,",
+				"          ShipMethodID as string,",
+				"          CreditCardID as string,",
+				"          CreditCardApprovalCode as string,",
+				"          CurrencyRateID as string,",
+				"          SubTotal as string,",
+				"          TaxAmt as string,",
+				"          Freight as string,",
+				"          TotalDue as string,",
+				"          Comment as string,",
+				"          rowguid as string,",
+				"          ModifiedDate as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source2",
+				"source1, source2 union(byName: true)~> union1",
+				"union1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+			]
+		}
+	}
+}
