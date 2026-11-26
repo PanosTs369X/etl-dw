@@ -1,0 +1,16 @@
+{
+	"name": "AzureSqlTable60",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "etl_dw_1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "wrk",
+			"table": "Product_new"
+		}
+	}
+}
