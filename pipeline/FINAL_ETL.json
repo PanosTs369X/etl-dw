@@ -68,7 +68,7 @@
 					{
 						"activity": "Select_Tables_from_OLTP",
 						"dependencyConditions": [
-							"Skipped"
+							"Completed"
 						]
 					}
 				],
